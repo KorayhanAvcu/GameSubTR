@@ -361,7 +361,7 @@ public sealed class SubtitleController : IDisposable
         var g = _game; if (g == null) return;
         var profile = _settings.GetOrCreateProfile(g.ExeName);
         _lastShownText = translated; _lastShownOriginal = original; _lastShownOrigin = origin;
-        var layout = origin == "audio" && profile.Placement == OverlayPlacement.OverOriginal
+        var layout = origin == "audio" && profile.Placement != OverlayPlacement.Fixed
             ? LayoutCalculator.For(new GameProfile { Placement = OverlayPlacement.Fixed, FixedBottom = profile.FixedBottom })
             : LayoutCalculator.For(profile);
         _presenter?.Show(translated, profile.ShowOriginal ? original : null, layout, SubtitleStyle.From(profile));

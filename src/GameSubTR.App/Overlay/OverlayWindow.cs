@@ -6,6 +6,7 @@ using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using GameSubTR.App.Native;
 using GameSubTR.Core.Logging;
+using GameSubTR.Core.Models;
 
 namespace GameSubTR.App.Overlay;
 
@@ -19,6 +20,8 @@ public sealed class OverlayWindow : Window
     private readonly Canvas _canvas = new();
     private readonly Border _box = new();
     private readonly TextBlock _text = new();
+    // Saydam zeminde okunabilirlik için 8 yönde siyah kopya (kontur).
+    private readonly TextBlock[] _outline = new TextBlock[8];
     private readonly TextBlock _original = new();
     private readonly Border _statusBox = new();
     private readonly TextBlock _status = new();
@@ -46,7 +49,7 @@ public sealed class OverlayWindow : Window
         _text.TextAlignment = TextAlignment.Center;
         _text.FontWeight = FontWeights.SemiBold;
         _text.FontFamily = new FontFamily("Segoe UI");
-        _text.Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 6, ShadowDepth = 0, Opacity = 1 };
+        _text.Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 8, ShadowDepth = 0, Opacity = 0.9 };
 
         _original.TextWrapping = TextWrapping.Wrap;
         _original.TextAlignment = TextAlignment.Center;
@@ -55,8 +58,27 @@ public sealed class OverlayWindow : Window
         _original.Margin = new Thickness(0, 4, 0, 0);
         _original.Visibility = Visibility.Collapsed;
 
+        var textGrid = new Grid();
+        int k = 0;
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                var o = new TextBlock
+                {
+                    TextWrapping = TextWrapping.Wrap,
+                    TextAlignment = TextAlignment.Center,
+                    FontWeight = FontWeights.SemiBold,
+                    FontFamily = _text.FontFamily,
+                    Foreground = Brushes.Black,
+                    Tag = new Point(dx, dy)
+                };
+                _outline[k++] = o;
+                textGrid.Children.Add(o);
+            }
+        textGrid.Children.Add(_text);
         var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        stack.Children.Add(_text);
+        stack.Children.Add(textGrid);
         stack.Children.Add(_original);
         _box.Child = stack;
         _box.CornerRadius = new CornerRadius(6);
@@ -145,6 +167,15 @@ public sealed class OverlayWindow : Window
 
         _text.Text = text;
         _text.FontSize = Math.Max(10, style.FontSize * scale);
+        double stroke = Math.Max(1.0, _text.FontSize / 16.0);
+        foreach (var o in _outline)
+        {
+            o.Text = text;
+            o.FontSize = _text.FontSize;
+            var d = (Point)o.Tag;
+            o.RenderTransform = new TranslateTransform(d.X * stroke, d.Y * stroke);
+        }
+        _original.Effect ??= new DropShadowEffect { Color = Colors.Black, BlurRadius = 6, ShadowDepth = 0, Opacity = 0.9 };
         _text.Foreground = ParseBrush(style.TextColor, Brushes.White);
         _original.Text = original ?? "";
         _original.FontSize = Math.Max(9, style.FontSize * 0.6 * scale);

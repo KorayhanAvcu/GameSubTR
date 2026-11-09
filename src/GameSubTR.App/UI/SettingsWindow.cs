@@ -160,10 +160,11 @@ public sealed class SettingsWindow : Window
         _gameEditor.Children.Add(Row("Gösterim", _presenter));
         _gameEditor.Children.Add(Note("Auto: exclusive fullscreen'de oyun içi hook, diğerlerinde pencere · Hook: sadece tek oyunculu oyunlarda"));
         _gameEditor.Children.Add(Row("Konum", _placement));
+        _gameEditor.Children.Add(Note("AboveOriginal: seçilen alanın üstünde, saydam · OverOriginal: orijinali kapatır · Fixed: ekranın altında sabit"));
         _gameEditor.Children.Add(Row("Sabit konum alt sınırı (0–1)", _fixedBottom));
         _gameEditor.Children.Add(Row("Yazı boyutu (1080p px)", _font));
         _gameEditor.Children.Add(Row("Yazı rengi", _color));
-        _gameEditor.Children.Add(Row("Arka plan opaklığı (0–1)", _bg));
+        _gameEditor.Children.Add(Row("Arka plan opaklığı (0 = saydam)", _bg));
         _gameEditor.Children.Add(Row("Altyazı rengi filtresi", _filter));
         _gameEditor.Children.Add(Row("OCR aralığı (ms)", _interval));
         _gameEditor.Children.Add(_showOrig);

@@ -14,6 +14,8 @@ public enum PresenterMode { Auto, Window, Hook }
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum OverlayPlacement
 {
+    /// <summary>Seçilen altyazı alanının hemen üstünde, saydam zeminde (varsayılan).</summary>
+    AboveOriginal,
     /// <summary>Orijinal altyazının tam üstüne (onu kapatır).</summary>
     OverOriginal,
     /// <summary>Ekranda sabit bir dikey konumda.</summary>
@@ -58,12 +60,13 @@ public sealed class GameProfile
     public OcrColorFilter ColorFilter { get; set; } = OcrColorFilter.Auto;
     public int OcrIntervalMs { get; set; } = 250;
 
-    public OverlayPlacement Placement { get; set; } = OverlayPlacement.OverOriginal;
+    public OverlayPlacement Placement { get; set; } = OverlayPlacement.AboveOriginal;
     /// <summary>Fixed modda altyazı bloğunun alt kenarının ekran yüksekliğine oranı.</summary>
     public double FixedBottom { get; set; } = 0.92;
     public double FontSize { get; set; } = 30;
     public string TextColor { get; set; } = "#FFFFFF";
-    public double BackgroundOpacity { get; set; } = 0.70;
+    /// <summary>0 = tamamen saydam (sadece konturlu yazı).</summary>
+    public double BackgroundOpacity { get; set; } = 0.0;
     public bool ShowOriginal { get; set; }
 
     /// <summary>Çevrilmeyecek / sabit çevrilecek terimler (karakter adları vb.). Kaynak → hedef.</summary>
@@ -119,7 +122,8 @@ public sealed class AudioSettings
 
 public sealed class AppSettings
 {
-    public int Version { get; set; } = 1;
+    public const int CurrentVersion = 2;
+    public int Version { get; set; } = CurrentVersion;
     public bool Enabled { get; set; } = true;
     public HotkeySettings Hotkeys { get; set; } = new();
     public TranslationSettings Translation { get; set; } = new();

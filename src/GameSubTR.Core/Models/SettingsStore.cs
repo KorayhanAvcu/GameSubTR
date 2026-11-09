@@ -31,6 +31,7 @@ public sealed class SettingsStore
                     s.Profiles = new Dictionary<string, GameProfile>(s.Profiles, StringComparer.OrdinalIgnoreCase);
                     foreach (var p in s.Profiles.Values)
                         p.Glossary = new Dictionary<string, string>(p.Glossary, StringComparer.OrdinalIgnoreCase);
+                    Migrate(s);
                     return s;
                 }
             }
@@ -41,6 +42,21 @@ public sealed class SettingsStore
             try { File.Copy(FilePath, FilePath + ".bad", true); } catch { /* yoksay */ }
         }
         return new AppSettings();
+    }
+
+    /// <summary>Eski ayar sürümlerini günceller.</summary>
+    public static void Migrate(AppSettings s)
+    {
+        if (s.Version < 2)
+        {
+            // v1: çeviri orijinali siyah kutuyla kapatıyordu → v2: saydam, alanın üstünde.
+            foreach (var p in s.Profiles.Values)
+            {
+                if (p.Placement == OverlayPlacement.OverOriginal) p.Placement = OverlayPlacement.AboveOriginal;
+                p.BackgroundOpacity = 0.0;
+            }
+        }
+        s.Version = AppSettings.CurrentVersion;
     }
 
     public void Save(AppSettings settings)
