@@ -3,7 +3,7 @@ using System.Text;
 
 namespace GameSubTR.App.Native;
 
-internal static class Win32
+public static class Win32
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT { public int Left, Top, Right, Bottom; public int Width => Right - Left; public int Height => Bottom - Top; }

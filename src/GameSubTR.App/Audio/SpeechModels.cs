@@ -1,3 +1,4 @@
+using System.Net.Http;
 using GameSubTR.Core.Audio;
 using GameSubTR.Core.Logging;
 using Microsoft.ML.OnnxRuntime;
