@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Native hook (MSVC x64 + x86)
+        shell: pwsh
+        run: ./build.ps1 -NativeOnly
+
+      - name: Test + publish (framework-dependent)
+        shell: pwsh
+        run: |
+          ./build.ps1 -Version "${{ steps.ver.outputs.version }}"
+          Rename-Item dist/GameSubTR-win-x64.zip "GameSubTR-${{ steps.ver.outputs.version }}-win-x64.zip"
+
+      - name: Publish (self-contained)
+        shell: pwsh
+        run: |
+          ./build.ps1 -Version "${{ steps.ver.outputs.version }}" -SelfContained -SkipTests
+          Rename-Item dist/GameSubTR-win-x64.zip "GameSubTR-${{ steps.ver.outputs.version }}-win-x64-selfcontained.zip"
+
+      - name: SHA256
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/*.zip | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name } | Set-Content dist/SHA256SUMS.txt
+          Get-Content dist/SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: GameSubTR ${{ github.ref_name }}
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            ## İndirme
+            - **GameSubTR-${{ steps.ver.outputs.version }}-win-x64-selfcontained.zip** — önerilen, .NET kurmaya gerek yok
+            - **GameSubTR-${{ steps.ver.outputs.version }}-win-x64.zip** — daha küçük, .NET 8 Desktop Runtime gerekir
+
+            Kurulum: zip'i bir klasöre çıkar → `GameSubTR.exe`. İlk kurulumda İngilizce OCR paketi için README'ye bak.
+          files: |
+            dist/*.zip
+            dist/SHA256SUMS.txt

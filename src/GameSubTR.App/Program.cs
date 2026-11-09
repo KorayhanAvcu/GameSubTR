@@ -41,6 +41,17 @@ public static class Program
             if (!File.Exists(Path.Combine(SubtitleController.DataDir, "settings.json")))
                 tray.ShowBalloon("GameSubTR çalışıyor",
                     $"Oyunu açın, {controller.Settings.Hotkeys.SelectRegion} ile altyazı bölgesini seçin. Ayarlar için tepsi simgesine sağ tıklayın.");
+
+            // Yeni sürüm kontrolü (GitHub Releases).
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(8));
+                using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                http.DefaultRequestHeaders.UserAgent.ParseAdd("GameSubTR/" + Services.UpdateChecker.CurrentVersion);
+                var tag = await Services.UpdateChecker.CheckAsync(http);
+                if (tag != null)
+                    app.Dispatcher.Invoke(() => tray.ShowUpdate(tag));
+            });
         };
         app.Run();
     }
@@ -67,14 +78,29 @@ public sealed class TrayIcon : IDisposable
         _modeBoth = new Forms.ToolStripMenuItem("İkisi birden", null, (_, _) => SetMode(Core.Models.SourceMode.Both));
         mode.DropDownItems.AddRange(new Forms.ToolStripItem[] { _modeOcr, _modeAudio, _modeBoth });
         var settings = new Forms.ToolStripMenuItem("Ayarlar...", null, (_, _) => _c.OpenSettings());
+        var about = new Forms.ToolStripMenuItem($"Sürüm {Services.UpdateChecker.CurrentVersion.ToString(3)} — sürümler sayfası", null, (_, _) => OpenReleases());
         var logs = new Forms.ToolStripMenuItem("Log klasörünü aç", null, (_, _) =>
             System.Diagnostics.Process.Start("explorer.exe", Path.Combine(SubtitleController.DataDir, "logs")));
         var quit = new Forms.ToolStripMenuItem("Çıkış", null, (_, _) => { Dispose(); exit(); });
-        menu.Items.AddRange(new Forms.ToolStripItem[] { _gameLabel, new Forms.ToolStripSeparator(), _enabled, region, mode, settings, logs, new Forms.ToolStripSeparator(), quit });
+        menu.Items.AddRange(new Forms.ToolStripItem[] { _gameLabel, new Forms.ToolStripSeparator(), _enabled, region, mode, settings, logs, about, new Forms.ToolStripSeparator(), quit });
         menu.Opening += (_, _) => RefreshMenu();
         _icon.ContextMenuStrip = menu;
         _icon.DoubleClick += (_, _) => _c.OpenSettings();
+        _icon.BalloonTipClicked += (_, _) => { if (_updateTag != null) OpenReleases(); };
     }
+
+    private string? _updateTag;
+
+    public void ShowUpdate(string tag)
+    {
+        _updateTag = tag;
+        _icon.ShowBalloonTip(10000, "GameSubTR güncellemesi var",
+            $"Yeni sürüm {tag} yayınlandı (sizdeki: v{Services.UpdateChecker.CurrentVersion.ToString(3)}). İndirmek için tıklayın.",
+            Forms.ToolTipIcon.Info);
+    }
+
+    private static void OpenReleases() =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Services.UpdateChecker.ReleasesUrl) { UseShellExecute = true });
 
     private void SetMode(Core.Models.SourceMode m)
     {
@@ -100,7 +126,11 @@ public sealed class TrayIcon : IDisposable
         _icon.Text = t.Length > 63 ? t[..63] : t;
     }
 
-    public void ShowBalloon(string title, string text) => _icon.ShowBalloonTip(6000, title, text, Forms.ToolTipIcon.Info);
+    public void ShowBalloon(string title, string text)
+    {
+        _updateTag = null;
+        _icon.ShowBalloonTip(6000, title, text, Forms.ToolTipIcon.Info);
+    }
 
     private static Drawing.Icon CreateIcon()
     {

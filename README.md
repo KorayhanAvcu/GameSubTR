@@ -1,5 +1,7 @@
 # GameSubTR — Oyun Altyazı Çevirici (EN → TR)
 
+[![CI](https://github.com/KorayhanAvcu/GameSubTR/actions/workflows/ci.yml/badge.svg)](https://github.com/KorayhanAvcu/GameSubTR/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/KorayhanAvcu/GameSubTR)](https://github.com/KorayhanAvcu/GameSubTR/releases/latest)
+
 Oyun oynarken İngilizce altyazıları **gerçek zamanlı Türkçeye çevirir**. Her oyunda çalışır; altyazısı olmayan oyunlarda **oyunun sesini** yazıya döküp çevirir. Tam ekranda (exclusive fullscreen dahil) çalışır.
 
 ![DX9 hook testi](docs/hook-test-dx9.png)
@@ -13,7 +15,11 @@ Oyun oynarken İngilizce altyazıları **gerçek zamanlı Türkçeye çevirir**.
 | **Çeviri** | Claude → OpenAI uyumlu LLM (Ollama ile offline) → DeepL → Google (anahtarsız). Hata veren motor otomatik atlanır. Önceki replikler bağlam olarak gönderilir, karakter isimleri sözlükle korunur, çeviriler oyun bazında önbelleğe alınır. |
 | **Gösterim** | *Pencere*: şeffaf, tıklamayı geçiren, ekran yakalamaya girmeyen üst katman (kenarlıksız + modern tam ekran). *Hook*: gerçek exclusive fullscreen oyunlarda altyazı DX9/DX11 ile **oyunun kendi ekranına** çizilir. *Auto* modu doğru olanı kendisi seçer. |
 
-## Kurulum
+## Hızlı kurulum (hazır paket)
+
+[Releases](https://github.com/KorayhanAvcu/GameSubTR/releases/latest) sayfasından **...-win-x64-selfcontained.zip** dosyasını indir, bir klasöre çıkar, `GameSubTR.exe`'yi çalıştır. Aşağıdaki 2. adımdaki İngilizce OCR paketini kurmayı unutma. Yeni sürüm çıktığında uygulama tepsiden bildirir.
+
+## Kaynaktan derleme
 
 1. **.NET 8 SDK** (yoksa): `winget install Microsoft.DotNet.SDK.8`
 2. **İngilizce OCR paketi** (Türkçe Windows'ta genelde yüklü değildir) — PowerShell'i *yönetici olarak* aç:
@@ -26,7 +32,6 @@ Oyun oynarken İngilizce altyazıları **gerçek zamanlı Türkçeye çevirir**.
    ```
    Çıktı: `dist\GameSubTR\GameSubTR.exe` (ve `dist\GameSubTR-win-x64.zip`).
    Hook DLL'leri `native\bin` içinde hazır gelir; MSVC ile yeniden derlemek istersen `.\build.ps1 -Native`.
-   GitHub'a push edersen Actions aynı paketi otomatik üretir (`.github/workflows/build.yml`).
 
 ## Kullanım
 
@@ -72,6 +77,20 @@ Kısayollar **Ayarlar → Kısayollar**'dan değiştirilebilir.
 | Ses yakalanamadı | Windows 10 21H2+ / Windows 11 gerekir; ya da "sadece oyunun sesi" seçeneğini kapat |
 
 Loglar: tepsi menüsü → *Log klasörünü aç* (`%LocalAppData%\GameSubTR\logs`). Ayarlar: `%LocalAppData%\GameSubTR\settings.json`.
+
+## CI/CD
+
+| İş akışı | Tetikleyici | Ne yapar |
+|---|---|---|
+| `ci.yml` | `main`'e push, pull request | Hook DLL'leri (MSVC x64/x86) + testler + yayınlama; paket 14 gün artifact olarak saklanır |
+| `release.yml` | `v*.*.*` etiketi | Sürüm numarasını etiketten alır, normal + self-contained paket, SHA256, otomatik sürüm notlarıyla GitHub Release |
+| Dependabot | Haftalık | NuGet paketleri ve Actions sürümleri için PR açar |
+
+Yeni sürüm yayınlamak:
+```bash
+git tag v1.1.0 && git push origin v1.1.0
+```
+`-` içeren etiketler (`v1.2.0-beta.1`) ön sürüm olarak işaretlenir.
 
 ## Proje yapısı
 

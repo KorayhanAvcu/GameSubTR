@@ -1,19 +1,39 @@
 <#
-  GameSubTR derleme betiği (Windows).
+  GameSubTR derleme betiği (Windows). CI/CD de bu betiği kullanır.
   Kullanım (PowerShell, proje klasöründe):
-      .\build.ps1                 # test + yayınla → dist\GameSubTR\GameSubTR.exe
-      .\build.ps1 -SelfContained  # .NET kurulu olmayan bilgisayarlar için tek klasör
-      .\build.ps1 -Native         # hook DLL'lerini MSVC/CMake ile yeniden derle (isteğe bağlı)
+      .\build.ps1                       # test + yayınla → dist\GameSubTR\GameSubTR.exe
+      .\build.ps1 -SelfContained        # .NET kurulu olmayan bilgisayarlar için
+      .\build.ps1 -Native               # önce hook DLL'lerini MSVC/CMake ile yeniden derle
+      .\build.ps1 -NativeOnly           # sadece hook DLL'lerini derle
+      .\build.ps1 -Version 1.2.0        # sürüm numarası ver
 #>
 param(
     [switch]$SelfContained,
     [switch]$Native,
-    [switch]$SkipTests
+    [switch]$NativeOnly,
+    [switch]$SkipTests,
+    [string]$Version = "1.0.0"
 )
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
 function Step($m) { Write-Host "`n==> $m" -ForegroundColor Cyan }
+function Run($exe, [string[]]$argList) {
+    & $exe @argList | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "$exe başarısız (çıkış kodu $LASTEXITCODE)" }
+}
+
+if ($Native -or $NativeOnly) {
+    Step "Hook DLL'leri derleniyor (CMake + Visual Studio)"
+    New-Item -ItemType Directory -Force native\bin | Out-Null
+    foreach ($a in @(@{A='x64';B='64'}, @{A='Win32';B='32'})) {
+        $dir = "native\build-msvc-$($a.B)"
+        Run cmake @('-S', 'native', '-B', $dir, '-A', $a.A)
+        Run cmake @('--build', $dir, '--config', 'Release')
+        Copy-Item "$dir\Release\GameSubTR.Hook$($a.B).dll", "$dir\Release\GameSubTR.Injector$($a.B).exe" native\bin -Force
+    }
+    if ($NativeOnly) { Write-Host "Hook DLL'leri hazır: native\bin" -ForegroundColor Green; exit 0 }
+}
 
 Step ".NET SDK kontrolü"
 $sdks = (& dotnet --list-sdks) 2>$null
@@ -22,29 +42,16 @@ if (-not ($sdks -match '^(8|9|10)\.')) {
     exit 1
 }
 
-if ($Native) {
-    Step "Hook DLL'leri derleniyor (CMake + Visual Studio)"
-    foreach ($a in @(@{A='x64';B='64'}, @{A='Win32';B='32'})) {
-        $dir = "native\build-msvc-$($a.B)"
-        cmake -S native -B $dir -A $a.A | Out-Host
-        cmake --build $dir --config Release | Out-Host
-        New-Item -ItemType Directory -Force native\bin | Out-Null
-        Copy-Item "$dir\Release\GameSubTR.Hook$($a.B).dll", "$dir\Release\GameSubTR.Injector$($a.B).exe" native\bin -Force
-    }
-}
-
 if (-not $SkipTests) {
     Step "Testler"
-    dotnet test tests\GameSubTR.Core.Tests -c Release --nologo
-    if ($LASTEXITCODE -ne 0) { throw "Testler başarısız" }
+    Run dotnet @('test', 'tests\GameSubTR.Core.Tests', '-c', 'Release', '--nologo')
 }
 
-Step "Uygulama yayınlanıyor"
+Step "Uygulama yayınlanıyor (v$Version)"
 $out = "dist\GameSubTR"
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 $sc = if ($SelfContained) { 'true' } else { 'false' }
-dotnet publish src\GameSubTR.App -c Release -r win-x64 --self-contained $sc -o $out --nologo
-if ($LASTEXITCODE -ne 0) { throw "Yayınlama başarısız" }
+Run dotnet @('publish', 'src\GameSubTR.App', '-c', 'Release', '-r', 'win-x64', '--self-contained', $sc, '-o', $out, '--nologo', "-p:Version=$Version")
 
 Copy-Item native\bin\* $out -Force
 foreach ($f in 'GameSubTR.exe','GameSubTR.Hook64.dll','GameSubTR.Hook32.dll','GameSubTR.Injector64.exe','GameSubTR.Injector32.exe','models\silero_vad.onnx') {
@@ -55,5 +62,5 @@ Step "Zip"
 $zip = "dist\GameSubTR-win-x64.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path "$out\*" -DestinationPath $zip
-Write-Host "`nHazır: $out\GameSubTR.exe" -ForegroundColor Green
+Write-Host "`nHazır: $out\GameSubTR.exe (v$Version)" -ForegroundColor Green
 Write-Host "Zip:   $zip" -ForegroundColor Green
