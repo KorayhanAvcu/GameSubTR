@@ -3,6 +3,13 @@ name: Release
 on:
   push:
     tags: [ 'v*.*.*' ]
+    branches: [ main ]
+    paths: [ 'VERSION' ]          # VERSION dosyası değişince otomatik sürüm
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Sürüm (ör. 1.2.0). Boş bırakılırsa VERSION dosyası kullanılır.'
+        required: false
 
 permissions:
   contents: write
@@ -18,12 +25,19 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Version from tag
+      - name: Sürümü belirle
         id: ver
         shell: pwsh
         run: |
-          $v = "${{ github.ref_name }}".TrimStart('v')
+          if ("${{ github.ref_type }}" -eq "tag") { $v = "${{ github.ref_name }}".TrimStart('v') }
+          elseif ("${{ github.event.inputs.version }}") { $v = "${{ github.event.inputs.version }}".TrimStart('v') }
+          else { $v = (Get-Content VERSION -Raw).Trim() }
+          if ($v -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$') { throw "Geçersiz sürüm: $v" }
+          git fetch --tags --quiet
+          $exists = git tag -l "v$v"
+          if ($exists -and "${{ github.ref_type }}" -ne "tag") { throw "v$v zaten yayınlanmış. VERSION dosyasını artırın." }
           "version=$v" >> $env:GITHUB_OUTPUT
+          "tag=v$v" >> $env:GITHUB_OUTPUT
 
       - name: Native hook (MSVC x64 + x86)
         shell: pwsh
@@ -49,9 +63,11 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          name: GameSubTR ${{ github.ref_name }}
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: GameSubTR ${{ steps.ver.outputs.tag }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(steps.ver.outputs.version, '-') }}
           body: |
             ## İndirme
             - **GameSubTR-${{ steps.ver.outputs.version }}-win-x64-selfcontained.zip** — önerilen, .NET kurmaya gerek yok

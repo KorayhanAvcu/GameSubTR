@@ -83,14 +83,15 @@ Loglar: tepsi menüsü → *Log klasörünü aç* (`%LocalAppData%\GameSubTR\log
 | İş akışı | Tetikleyici | Ne yapar |
 |---|---|---|
 | `ci.yml` | `main`'e push, pull request | Hook DLL'leri (MSVC x64/x86) + testler + yayınlama; paket 14 gün artifact olarak saklanır |
-| `release.yml` | `v*.*.*` etiketi | Sürüm numarasını etiketten alır, normal + self-contained paket, SHA256, otomatik sürüm notlarıyla GitHub Release |
+| `release.yml` | `VERSION` dosyası değişip `main`'e push, `v*.*.*` etiketi veya Actions → Run workflow | Sürüm numarasını alır, etiketi oluşturur, normal + self-contained paket, SHA256, otomatik sürüm notlarıyla GitHub Release |
 | Dependabot | Haftalık | NuGet paketleri ve Actions sürümleri için PR açar |
 
-Yeni sürüm yayınlamak:
+Yeni sürüm yayınlamak için `VERSION` dosyasındaki numarayı artırıp `main`'e push'la:
 ```bash
-git tag v1.1.0 && git push origin v1.1.0
+echo 1.1.0 > VERSION && git commit -am "v1.1.0" && git push
 ```
-`-` içeren etiketler (`v1.2.0-beta.1`) ön sürüm olarak işaretlenir.
+(Alternatif: `git tag v1.1.0 && git push origin v1.1.0` ya da GitHub → Actions → Release → Run workflow.)
+`-` içeren sürümler (`1.2.0-beta.1`) ön sürüm olarak işaretlenir.
 
 ## Proje yapısı
 
