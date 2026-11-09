@@ -1,0 +1,8 @@
+bin/
+obj/
+dist/
+!native/bin/
+native/build-*/
+native/third_party/
+*.user
+.vs/
