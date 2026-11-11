@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Oyun yama mantığı: algılama, çıkarma, toplu çeviri, kurulum, yedek. UI ve paket bağımlılığı yok. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>GameSubTR.Patching</RootNamespace>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GameSubTR.Core\GameSubTR.Core.csproj" />
+  </ItemGroup>
+</Project>
