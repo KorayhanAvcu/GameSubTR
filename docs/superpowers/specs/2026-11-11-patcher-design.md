@@ -75,9 +75,12 @@ public interface IGamePatcher
 
 ### Toplu çeviri
 
-- Birimler 30–50'lik gruplar halinde çevrilir. LLM motorlarında grup, numaralı satırlar
-  olarak tek istekte gönderilir (bağlam + tutarlılık); DeepL/Google'da birim birim.
-- Her çeviri anında `TranslationCache`'e yazılır → işlem kesilirse kaldığı yerden devam.
+- Birimler 30–50'lik gruplar halinde, numaralı satırlar (`[n] metin`) olarak tek istekte
+  gönderilir. Yanıtta numaralar bozulursa o grup birim birim yeniden çevrilir.
+- Her çeviri anında birebir anahtarlı ilerleme deposuna yazılır
+  (`%LocalAppData%\GameSubTR\patcher\<oyun>\translations.jsonl`) → işlem kesilirse kaldığı
+  yerden devam. Core'daki `TranslationCache` kullanılmaz; anahtarı noktalama ve büyük-küçük
+  harfi yok saydığı için yamada yanlış eşleşme üretir.
 - Motor hatasında Core'daki mevcut yedek zinciri (Claude → OpenAI uyumlu → DeepL → Google) geçerlidir.
 - Başlamadan önce birim ve karakter sayısı gösterilir; kullanıcı onaylar.
 
@@ -96,9 +99,11 @@ public interface IGamePatcher
 - **Çıkarma:** `game/**/*.rpy` içinden diyalog satırları, `menu` seçenekleri ve `_("...")`
   dizgeleri ayrıştırılır. Yalnızca `.rpyc`/`.rpa` varsa ilk sürümde "betikler derlenmiş,
   desteklenmiyor" denir.
-- **Kurulum:** `game/tl/turkish/*.rpy` üretilir (Ren'Py'nin standart `translate turkish`
-  blokları ve `old/new` dizgeleri). Dili varsayılan yapmak için `game/tl/turkish/zz_gamesubtr.rpy`
-  eklenir (`config.language = "turkish"` + Türkçe destekli font tanımı).
+- **Kurulum:** İki dosya eklenir: `game/gamesubtr_tr.json` (kaynak → çeviri sözlüğü) ve
+  `game/zz_gamesubtr_tr.rpy` (sözlüğü `config.say_menu_text_filter` ve `config.replace_text`
+  üzerinden uygular; isteğe bağlı olarak arayüz fontlarını Ren'Py ile gelen DejaVuSans yapar).
+  `tl/turkish` çeviri blokları kullanılmaz: her satır için motorun ürettiği özet kimliğini
+  dışarıdan birebir üretmek kırılgandır.
 - **Sonuç:** Hiçbir orijinal dosya değişmez; yalnızca dosya eklenir.
 
 ### RPG Maker MV/MZ
