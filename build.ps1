@@ -45,6 +45,7 @@ if (-not ($sdks -match '^(8|9|10)\.')) {
 if (-not $SkipTests) {
     Step "Testler"
     Run dotnet @('test', 'tests\GameSubTR.Core.Tests', '-c', 'Release', '--nologo')
+    Run dotnet @('test', 'tests\GameSubTR.Patching.Tests', '-c', 'Release', '--nologo')
 }
 
 Step "Uygulama yayınlanıyor (v$Version)"
@@ -52,9 +53,11 @@ $out = "dist\GameSubTR"
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 $sc = if ($SelfContained) { 'true' } else { 'false' }
 Run dotnet @('publish', 'src\GameSubTR.App', '-c', 'Release', '-r', 'win-x64', '--self-contained', $sc, '-o', $out, '--nologo', "-p:Version=$Version")
+# Kalıcı Türkçe yama aracı aynı klasöre yayınlanır (ortak DLL'ler paylaşılır).
+Run dotnet @('publish', 'src\GameSubTR.Patcher', '-c', 'Release', '-r', 'win-x64', '--self-contained', $sc, '-o', $out, '--nologo', "-p:Version=$Version")
 
 Copy-Item native\bin\* $out -Force
-foreach ($f in 'GameSubTR.exe','GameSubTR.Hook64.dll','GameSubTR.Hook32.dll','GameSubTR.Injector64.exe','GameSubTR.Injector32.exe','models\silero_vad.onnx') {
+foreach ($f in 'GameSubTR.exe','GameSubTR.Patcher.exe','GameSubTR.Hook64.dll','GameSubTR.Hook32.dll','GameSubTR.Injector64.exe','GameSubTR.Injector32.exe','models\silero_vad.onnx') {
     if (-not (Test-Path (Join-Path $out $f))) { throw "Eksik dosya: $f" }
 }
 
@@ -62,5 +65,5 @@ Step "Zip"
 $zip = "dist\GameSubTR-win-x64.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path "$out\*" -DestinationPath $zip
-Write-Host "`nHazır: $out\GameSubTR.exe (v$Version)" -ForegroundColor Green
+Write-Host "`nHazır: $out\GameSubTR.exe + GameSubTR.Patcher.exe (v$Version)" -ForegroundColor Green
 Write-Host "Zip:   $zip" -ForegroundColor Green

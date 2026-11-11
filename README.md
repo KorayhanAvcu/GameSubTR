@@ -78,6 +78,30 @@ Kısayollar **Ayarlar → Kısayollar**'dan değiştirilebilir.
 
 Loglar: tepsi menüsü → *Log klasörünü aç* (`%LocalAppData%\GameSubTR\logs`). Ayarlar: `%LocalAppData%\GameSubTR\settings.json`.
 
+## Kalıcı Türkçe yama (GameSubTR.Patcher)
+
+GameSubTR oyun sırasında canlı çeviri yapar. **GameSubTR.Patcher** ise oyunun metin dosyalarını bir kez çevirip oyuna kurar; sonrasında oyun doğrudan Türkçe açılır ve GameSubTR'nin çalışmasına gerek kalmaz.
+
+| Motor | Durum | Nasıl yapılır | Sınır |
+|---|---|---|---|
+| **Ren'Py** | Destekleniyor | Diyalog, menü seçenekleri ve arayüz dizgeleri çıkarılır; oyuna bir sözlük ve küçük bir betik eklenir. Orijinal dosyalar değişmez. | Betikleri yalnızca derlenmiş (`.rpyc`/`.rpa`) gelen oyunlar desteklenmez |
+| **RPG Maker MV / MZ** | Destekleniyor | `data/*.json` içindeki diyalog, seçenek, eşya/yetenek adları ve sistem terimleri yerinde çevrilir (her dosya yedeklenir). Uzun satırlar pencereye sığacak şekilde yeniden sarılır. | Eklenti (`js/plugins`) içindeki metinler ve oyun başlığı çevrilmez |
+| Unity, Unreal | Sonraki sürümde | Tanınır, henüz yama kurulmaz | |
+
+### Kullanım
+
+1. `GameSubTR.Patcher.exe`'yi aç, oyun klasörünü seç (ya da pencereye sürükle; Steam oyunların listede çıkar).
+2. Motor otomatik tanınır. **Metinleri çıkar** → kaç metin bulunduğunu ve hangi çeviri motorunun kullanılacağını görürsün.
+3. **Çeviriyi başlat**. İptal edersen çevrilenler saklanır, sonra kaldığı yerden devam eder.
+4. Oyunu aç. Beğenmezsen **Yamayı kaldır** oyunu bayt bayt eski haline döndürür.
+
+Çeviri motoru ve API anahtarları GameSubTR ile ortaktır (**GameSubTR → Ayarlar → Çeviri**). Anahtar girilmemişse ücretsiz Google kullanılır.
+
+- Değiştirilen her dosyanın yedeği oyun klasöründeki `.gamesubtr-patch` dizininde tutulur; bu dizini elle silme.
+- Oyun güncellenirse önce yamayı kaldır, güncellemeden sonra yeniden kur.
+- Anti-cheat algılanan oyunlara yama kurulmaz. Aracı yalnızca kendi bilgisayarındaki tek oyunculu oyunlarda kullan.
+- Değişken ve kontrol kodları (`[player]`, `{b}`, `\N[1]`, `%1`) çeviriden korunur; kodu bozulan çeviri kullanılmaz, o metin İngilizce kalır.
+
 ## CI/CD
 
 | İş akışı | Tetikleyici | Ne yapar |
@@ -100,6 +124,8 @@ src/GameSubTR.Core     Platformdan bağımsız mantık (görüntü işleme, kara
 src/GameSubTR.App      WPF tepsi uygulaması: yakalama, Windows OCR, WASAPI, Silero, Whisper, overlay, hook oturumu
 native/hook            C++ hook DLL (MinHook + Dear ImGui, DX9 + DX11, arka tampondan bölge okuma)
 native/injector        DLL yükleyici (x86 / x64)
+src/GameSubTR.Patching Kalıcı yama mantığı: motor algılama, metin çıkarma, toplu çeviri, kurulum, yedek/geri alma (Ren'Py, RPG Maker MV/MZ)
+src/GameSubTR.Patcher  WPF yama sihirbazı (GameSubTR.Patcher.exe)
 tests/                 xUnit testleri
 ```
 
@@ -107,4 +133,5 @@ tests/                 xUnit testleri
 
 - Core: 25 birim testi (görüntü ön işleme, Otsu, algısal özet, kararlılık/typewriter, yeniden örnekleme, VAD segmentleme, Whisper halüsinasyon filtresi, motor zinciri + yedekleme + önbellek, sözlük koruma).
 - Hook DLL: mingw ile x86/x64 derlendi; wine + Xvfb altında gerçek DX9 ve DX11 test uygulamasına enjekte edildi → altyazı çizimi (Türkçe karakterler dahil) ve arka tampondan bölge okuma çalıştı (ekran görüntüsü yukarıda).
+- Patching: 81 birim testi (motor algılama, yedek/geri alma ve SHA256 eşitliği, yer tutucu koruma, toplu çeviri ve devam etme, Ren'Py ayrıştırıcı, RPG Maker çıkarma/yeniden sarma, uçtan uca kur-kaldır). Gerçek oyunla deneme henüz yapılmadı.
 - WPF uygulaması Windows SDK gerektirdiği için Linux geliştirme ortamında derlenemedi; Windows'ta `build.ps1` veya GitHub Actions ile derlenir. İlk derlemede hata çıkarsa çıktıyı paylaşman yeterli.
