@@ -87,7 +87,7 @@ internal static class TestGames
     {
         var root = NewDir("MzGame");
         Write(root, "js/rmmz_core.js", "// core");
-        Write(root, "data/System.json", SystemMv.TrimEnd().TrimEnd('}') + ",\"advanced\":{\"mainFontFilename\":\"mplus-1m-regular.woff\",\"fontSize\":26}}");
+        Write(root, "data/System.json", SystemMv.TrimEnd()[..^1] +",\"advanced\":{\"mainFontFilename\":\"mplus-1m-regular.woff\",\"fontSize\":26}}");
         Write(root, "data/Map001.json", Map001.Replace("[\"Actor1\",0,0,2]", "[\"Actor1\",0,0,2,\"Old Man\"]"));
         Write(root, "data/Items.json", Items);
         return root;
