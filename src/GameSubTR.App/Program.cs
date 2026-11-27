@@ -42,6 +42,9 @@ public static class Program
                 tray.ShowBalloon("GameSubTR çalışıyor",
                     $"Oyunu açın, {controller.Settings.Hotkeys.SelectRegion} ile altyazı bölgesini seçin. Ayarlar için tepsi simgesine sağ tıklayın.");
 
+            // Masaüstü kısayolu (yoksa ya da klasör taşınmışsa).
+            _ = Task.Run(Services.DesktopShortcut.EnsureExists);
+
             // Yeni sürüm kontrolü (GitHub Releases).
             _ = Task.Run(async () =>
             {
@@ -80,10 +83,15 @@ public sealed class TrayIcon : IDisposable
         var settings = new Forms.ToolStripMenuItem("Ayarlar...", null, (_, _) => _c.OpenSettings());
         var patch = new Forms.ToolStripMenuItem("Kalıcı Türkçe yama...", null, (_, _) => OpenPatchWindow());
         var about = new Forms.ToolStripMenuItem($"Sürüm {Services.UpdateChecker.CurrentVersion.ToString(3)} — sürümler sayfası", null, (_, _) => OpenReleases());
+        var shortcut = new Forms.ToolStripMenuItem("Masaüstüne kısayol oluştur", null, (_, _) =>
+        {
+            try { Services.DesktopShortcut.Create(); ShowBalloon("GameSubTR", "Masaüstüne kısayol eklendi."); }
+            catch (Exception ex) { ShowBalloon("GameSubTR", "Kısayol oluşturulamadı: " + ex.Message); }
+        });
         var logs = new Forms.ToolStripMenuItem("Log klasörünü aç", null, (_, _) =>
             System.Diagnostics.Process.Start("explorer.exe", Path.Combine(SubtitleController.DataDir, "logs")));
         var quit = new Forms.ToolStripMenuItem("Çıkış", null, (_, _) => { Dispose(); exit(); });
-        menu.Items.AddRange(new Forms.ToolStripItem[] { _gameLabel, new Forms.ToolStripSeparator(), _enabled, region, mode, patch, settings, logs, about, new Forms.ToolStripSeparator(), quit });
+        menu.Items.AddRange(new Forms.ToolStripItem[] { _gameLabel, new Forms.ToolStripSeparator(), _enabled, region, mode, patch, settings, shortcut, logs, about, new Forms.ToolStripSeparator(), quit });
         menu.Opening += (_, _) => RefreshMenu();
         _icon.ContextMenuStrip = menu;
         _icon.DoubleClick += (_, _) => _c.OpenSettings();
