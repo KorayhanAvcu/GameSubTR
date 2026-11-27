@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ScreenCapture.NET.DX11" Version="*" />
+    <!-- 4.x yalnızca net10+; net8 için 3.x sabit. --><PackageReference Include="ScreenCapture.NET.DX11" Version="3.*" />
     <PackageReference Include="Whisper.net" Version="1.*" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.*" />
     <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.*" />
