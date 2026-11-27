@@ -76,7 +76,7 @@ public sealed class JsonTextFormat : ITextFormat
         }
         bool indented = Regex.IsMatch(content, @"\n[ \t]+[""\[{]");
         var opts = new JsonSerializerOptions { WriteIndented = indented, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-        var json = root?.ToJsonString(opts) ?? "null";
+        var json = (root?.ToJsonString(opts) ?? "null").Replace("\r\n", "\n");
         return TextFormats.Nl(content) == "\r\n" ? json.Replace("\n", "\r\n") : json;
     }
 
@@ -257,10 +257,12 @@ public sealed class XmlTextFormat : ITextFormat
         var doc = XDocument.Parse(content, LoadOptions.PreserveWhitespace);
         foreach (var (id, _, set) in Targets(doc).ToList())
             if (translations.TryGetValue(id, out var v)) set(v);
-        var body = doc.ToString(SaveOptions.DisableFormatting);
+        var body = doc.ToString(SaveOptions.DisableFormatting).Replace("\r\n", "\n");
+        if (TextFormats.Nl(content) == "\r\n") body = body.Replace("\n", "\r\n");
         if (doc.Declaration == null) return body;
-        // PreserveWhitespace ile bildirimden sonraki satır sonu gövdenin başında zaten korunuyor.
-        return doc.Declaration + body;
+        // Bildirimden sonraki satır sonunu işletim sistemine değil orijinal dosyaya göre yaz.
+        var after = Regex.Match(content, @"^\uFEFF?\s*<\?xml[^>]*\?>(?<nl>\r?\n)?");
+        return doc.Declaration + (after.Success ? after.Groups["nl"].Value : "") + body.TrimStart('\r', '\n');
     }
 }
 

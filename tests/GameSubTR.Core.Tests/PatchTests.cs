@@ -168,3 +168,27 @@ public class PatchTests
         Assert.Throws<InvalidDataException>(() => p.Apply(new[] { "only one" }));
     }
 }
+
+public class PatchNewlineTests
+{
+    [Fact]
+    public void Json_And_Xml_KeepOriginalLineEndings()
+    {
+        var jsonLf = "{\n  \"a\": \"Hello there\"\n}";
+        var jsonCrlf = "{\r\n  \"a\": \"Hello there\"\r\n}";
+        var j = new JsonTextFormat();
+        var outLf = j.Apply(jsonLf, new Dictionary<string, string> { ["$.a"] = "Merhaba" });
+        var outCrlf = j.Apply(jsonCrlf, new Dictionary<string, string> { ["$.a"] = "Merhaba" });
+        Assert.DoesNotContain("\r", outLf);
+        Assert.DoesNotContain("\r\r", outCrlf);
+        Assert.Contains("\r\n", outCrlf);
+
+        var xmlCrlf = "<?xml version=\"1.0\"?>\r\n<r>\r\n  <s>Hello there</s>\r\n</r>";
+        var x = new XmlTextFormat();
+        var e = x.Extract(xmlCrlf);
+        var outX = x.Apply(xmlCrlf, e.ToDictionary(k => k.Id, _ => "Merhaba"));
+        Assert.DoesNotContain("\r\r", outX);
+        Assert.Contains("<s>Merhaba</s>", outX);
+        Assert.StartsWith("<?xml version=\"1.0\"?>\r\n<r>\r\n", outX);
+    }
+}
