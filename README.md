@@ -67,7 +67,8 @@ Tepsi menüsü → **Kalıcı Türkçe yama...**
 - Desteklenen formatlar: JSON, CSV/TSV, XML/RESX, INI/properties/TXT, PO, Ren'Py `.rpy`
 - Orijinaller `oyun\_GameSubTR_yedek` klasörüne yedeklenir; **Yamayı geri al** ile her şey eski haline döner. Tekrar içe aktarmak her zaman orijinal üzerinden yapılır.
 - `{0}`, `%s`, `<b>`, `[tag]` gibi kod parçaları kontrol edilir; Google'ın eklediği boşluklar onarılır, bozulan satır İngilizce bırakılır (oyun bozulmaz).
-- Paketlenmiş formatlar (Unity `.assets`, Unreal `.pak/.locres`) henüz desteklenmiyor. Türkçe harfler kutu görünüyorsa oyunun fontu desteklemiyordur.
+- **Marvel's Spider-Man Remastered / Miles Morales (Insomniac):** oyun klasörü seçilince otomatik algılanır. Metinler oyunun DSAR/LZ4 arşivinden okunur; `ceviri_tablosu.csv` (ID;Ingilizce;Mevcut_Turkce;Turkce) ile ID'ye göre ya da `metinler.txt` ile satır satır çevrilebilir. Çeviri `asset_archive\GameSubTR\localization_tr` arşivine yazılır ve `toc` buna yönlendirilir (oyunun kendi arşivlerine dokunulmaz, geri alınabilir). Oyunda başka bir Türkçe yama varsa onun çevirileri de referans olarak gösterilir.
+- Unity `.assets` ve Unreal `.pak/.locres` henüz desteklenmiyor. Türkçe harfler kutu görünüyorsa oyunun fontu desteklemiyordur.
 
 ## Oyun ayarları (Ayarlar → Oyunlar)
 

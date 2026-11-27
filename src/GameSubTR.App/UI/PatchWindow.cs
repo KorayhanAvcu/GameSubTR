@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using GameSubTR.Core.Logging;
+using GameSubTR.Core.Insomniac;
 using GameSubTR.Core.Patching;
 using Forms = System.Windows.Forms;
 
@@ -21,6 +22,11 @@ public sealed class PatchWindow : Window
         FontFamily = new FontFamily("Consolas"), FontSize = 12, MinHeight = 220
     };
     private readonly Button _export, _import, _restore, _openWork, _openGoogle;
+    private readonly CheckBox _translit = new() { Content = "ğ, ş, ı, İ harflerini g, s, i, I yap (oyun fontu göstermeyebilir)", IsChecked = true, Margin = new Thickness(0, 2, 0, 2) };
+    private readonly CheckBox _keepExisting = new() { Content = "Benim çevirmediğim metinlerde oyundaki mevcut Türkçe yamayı kullan", IsChecked = true, Margin = new Thickness(0, 2, 0, 2) };
+    private readonly StackPanel _insomniacOptions = new() { Visibility = Visibility.Collapsed, Margin = new Thickness(0, 6, 0, 0) };
+
+    private bool IsInsomniac => Directory.Exists(_game.Text) && InsomniacPatcher.IsInsomniacGame(_game.Text);
 
     private static string WorkRoot => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "GameSubTR", "Yamalar");
 
@@ -57,6 +63,10 @@ public sealed class PatchWindow : Window
         });
         p.Children.Add(Row("Oyun klasörü", _game, pickGame));
         p.Children.Add(Row("Çalışma klasörü", _work, _openWork));
+        _insomniacOptions.Children.Add(new TextBlock { Text = "Insomniac oyunu algılandı (Marvel's Spider-Man). Metinler oyunun arşivinden okunur; çeviri ayrı bir yama dosyası olarak eklenir.", TextWrapping = TextWrapping.Wrap, Foreground = Brushes.SteelBlue });
+        _insomniacOptions.Children.Add(_translit);
+        _insomniacOptions.Children.Add(_keepExisting);
+        p.Children.Add(_insomniacOptions);
         var actions = new WrapPanel { Margin = new Thickness(0, 10, 0, 10) };
         actions.Children.Add(_export); actions.Children.Add(_openGoogle); actions.Children.Add(_import); actions.Children.Add(_restore);
         p.Children.Add(actions);
@@ -78,7 +88,7 @@ public sealed class PatchWindow : Window
         return g;
     }
 
-    private string ProjectFile => Path.Combine(_work.Text, PatchProject.ProjectFileName);
+    private string ProjectFile => Path.Combine(_work.Text, IsInsomniac ? InsomniacProject.ProjectFileName : PatchProject.ProjectFileName);
 
     private void UpdateButtons()
     {
@@ -86,7 +96,8 @@ public sealed class PatchWindow : Window
         _export.IsEnabled = hasGame;
         _openWork.IsEnabled = Directory.Exists(_work.Text);
         _import.IsEnabled = hasGame && File.Exists(ProjectFile);
-        _restore.IsEnabled = hasGame && Directory.Exists(Path.Combine(_game.Text, PatchProject.BackupFolderName));
+        _restore.IsEnabled = hasGame && (IsInsomniac ? InsomniacPatcher.IsPatched(_game.Text) : Directory.Exists(Path.Combine(_game.Text, PatchProject.BackupFolderName)));
+        _insomniacOptions.Visibility = IsInsomniac ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void Write(string line)
@@ -126,6 +137,7 @@ public sealed class PatchWindow : Window
         string game = _game.Text, work = _work.Text;
         SetBusy(true);
         Write($"Taranıyor: {game}");
+        if (IsInsomniac) { await ExportInsomniacAsync(game, work); SetBusy(false); return; }
         try
         {
             var progress = new Progress<string>(_ => { });
@@ -159,7 +171,7 @@ public sealed class PatchWindow : Window
         var dlg = new Microsoft.Win32.OpenFileDialog
         {
             Title = "Çevrilmiş dosya(lar)ı seçin — parçalar ise hepsini seçin",
-            Filter = "Metin dosyaları (*.txt)|*.txt|Tüm dosyalar|*.*",
+            Filter = "Çeviri dosyaları (*.txt;*.csv)|*.txt;*.csv|Tüm dosyalar|*.*",
             Multiselect = true,
             InitialDirectory = Directory.Exists(_work.Text) ? _work.Text : null
         };
@@ -170,6 +182,7 @@ public sealed class PatchWindow : Window
         if (files.Count == 0) { Write("İngilizce metinler.txt seçildi; lütfen çevrilmiş dosyayı seçin."); return; }
 
         string projectFile = ProjectFile;
+        if (IsInsomniac) { await ImportInsomniacAsync(projectFile, files); return; }
         SetBusy(true);
         Write($"İçe aktarılıyor: {string.Join(", ", files.Select(Path.GetFileName))}");
         try
@@ -199,11 +212,70 @@ public sealed class PatchWindow : Window
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         try
         {
-            int n = PatchProject.Restore(_game.Text);
-            Write($"Geri alındı: {n} dosya orijinal haline döndü.");
+            if (IsInsomniac)
+                Write(InsomniacPatcher.Restore(_game.Text) ? "Geri alındı: oyun GameSubTR yamasından önceki haline döndü." : "Geri alınacak GameSubTR yaması bulunamadı.");
+            else
+            {
+                int n = PatchProject.Restore(_game.Text);
+                Write($"Geri alındı: {n} dosya orijinal haline döndü.");
+            }
         }
         catch (Exception ex) { Write("HATA: " + ex.Message); }
         UpdateButtons();
+    }
+
+    private async Task ExportInsomniacAsync(string game, string work)
+    {
+        try
+        {
+            var progress = new Progress<string>(Write);
+            var s = await Task.Run(() => InsomniacPatcher.Export(game, work, progress));
+            Write($"Bitti: {s.Entries:N0} metin → {s.Lines:N0} benzersiz satır ({s.Characters:N0} karakter). Kaynak: {s.SourceToc}");
+            if (s.ExistingTranslated > 0) Write($"Oyundaki mevcut Türkçe yamada {s.ExistingTranslated:N0} metin çevrilmiş; tabloda 'Mevcut_Turkce' sütununda görebilirsin.");
+            Write($"→ metinler.txt (tamamı), dokuman_001…{s.Documents:000}.txt (Google Dokümanlar için), parca_001…{s.Parts:000}.txt (kopyala-yapıştır için)");
+            Write($"→ {InsomniacProject.TableFileName} (ID;Ingilizce;Mevcut_Turkce;Turkce — Excel'de 'Turkce' sütununu doldur)");
+            Write("Ayrıntılar NASIL.txt dosyasında. Çevirince '2) Çeviriyi içe aktar'.");
+            OpenFolder(work);
+        }
+        catch (Exception ex)
+        {
+            Write("HATA: " + ex.Message);
+            Log.Error("Insomniac dışa aktarım", ex);
+        }
+    }
+
+    private async Task ImportInsomniacAsync(string projectFile, List<string> files)
+    {
+        SetBusy(true);
+        string game = _game.Text;
+        var options = new InsomniacPatcher.ApplyOptions { Transliterate = _translit.IsChecked == true, KeepExistingTranslations = _keepExisting.IsChecked == true };
+        Write($"İçe aktarılıyor: {string.Join(", ", files.Select(Path.GetFileName))}");
+        Write("Oyun açıksa önce kapat.");
+        try
+        {
+            var project = InsomniacPatcher.LoadProject(projectFile);
+            var problems = new List<string>();
+            var map = InsomniacPatcher.ReadTranslations(project, files, problems);
+            Write($"{map.Count:N0} metin için çeviri okundu.");
+            var r = await Task.Run(() => InsomniacPatcher.Apply(game, project, map, options, new Progress<string>(_ => { })));
+            Write($"Bitti: {r.Applied:N0} metin Türkçe yazıldı, {r.Unchanged:N0} metin İngilizce kaldı, {r.FilesWritten} dil varyantı güncellendi.");
+            foreach (var pr in problems.Concat(r.Problems).Take(40)) Write("  ! " + pr);
+            Write("Oyunu açıp deneyebilirsin. Beğenmezsen 'Yamayı geri al'.");
+        }
+        catch (IOException ex) when (ex.HResult == unchecked((int)0x80070020))
+        {
+            Write("HATA: Oyun dosyaları kullanımda. Oyunu kapatıp tekrar dene.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Write("HATA: Oyun klasörüne yazma izni yok. GameSubTR'yi yönetici olarak çalıştır.");
+        }
+        catch (Exception ex)
+        {
+            Write("HATA: " + ex.Message);
+            Log.Error("Insomniac içe aktarım", ex);
+        }
+        finally { SetBusy(false); }
     }
 
     private static void OpenFolder(string path)
