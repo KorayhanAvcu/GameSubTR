@@ -78,11 +78,12 @@ public sealed class TrayIcon : IDisposable
         _modeBoth = new Forms.ToolStripMenuItem("İkisi birden", null, (_, _) => SetMode(Core.Models.SourceMode.Both));
         mode.DropDownItems.AddRange(new Forms.ToolStripItem[] { _modeOcr, _modeAudio, _modeBoth });
         var settings = new Forms.ToolStripMenuItem("Ayarlar...", null, (_, _) => _c.OpenSettings());
+        var patch = new Forms.ToolStripMenuItem("Kalıcı Türkçe yama...", null, (_, _) => OpenPatchWindow());
         var about = new Forms.ToolStripMenuItem($"Sürüm {Services.UpdateChecker.CurrentVersion.ToString(3)} — sürümler sayfası", null, (_, _) => OpenReleases());
         var logs = new Forms.ToolStripMenuItem("Log klasörünü aç", null, (_, _) =>
             System.Diagnostics.Process.Start("explorer.exe", Path.Combine(SubtitleController.DataDir, "logs")));
         var quit = new Forms.ToolStripMenuItem("Çıkış", null, (_, _) => { Dispose(); exit(); });
-        menu.Items.AddRange(new Forms.ToolStripItem[] { _gameLabel, new Forms.ToolStripSeparator(), _enabled, region, mode, settings, logs, about, new Forms.ToolStripSeparator(), quit });
+        menu.Items.AddRange(new Forms.ToolStripItem[] { _gameLabel, new Forms.ToolStripSeparator(), _enabled, region, mode, patch, settings, logs, about, new Forms.ToolStripSeparator(), quit });
         menu.Opening += (_, _) => RefreshMenu();
         _icon.ContextMenuStrip = menu;
         _icon.DoubleClick += (_, _) => _c.OpenSettings();
@@ -90,6 +91,18 @@ public sealed class TrayIcon : IDisposable
     }
 
     private string? _updateTag;
+    private UI.PatchWindow? _patchWindow;
+
+    private void OpenPatchWindow()
+    {
+        System.Windows.Application.Current.Dispatcher.Invoke(() =>
+        {
+            if (_patchWindow is { IsLoaded: true }) { _patchWindow.Activate(); return; }
+            _patchWindow = new UI.PatchWindow();
+            _patchWindow.Closed += (_, _) => _patchWindow = null;
+            _patchWindow.Show();
+        });
+    }
 
     public void ShowUpdate(string tag)
     {

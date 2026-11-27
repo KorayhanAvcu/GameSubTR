@@ -56,6 +56,19 @@ Kısayollar **Ayarlar → Kısayollar**'dan değiştirilebilir.
 
 **Sözlük** (Ayarlar → Oyunlar): çevrilmemesi gereken isimleri her satıra bir tane yaz (`Geralt`), sabit çeviri için `Wild Hunt = Yabani Av`.
 
+## Kalıcı Türkçe yama (oyun dosyalarını çevirme)
+
+Tepsi menüsü → **Kalıcı Türkçe yama...**
+
+1. **Oyun klasörünü seç** → **1) Metinleri dışa aktar**: oyundaki metinler `Belgeler\GameSubTR\Yamalar\<oyun>\metinler.txt` dosyasına yazılır (her satır = bir metin; aynı metin tek satır). Kopyala-yapıştır için 4800 karakterlik `parca_001.txt…` dosyaları da oluşur.
+2. **Google Translate → Dokümanlar** ile `metinler.txt`'yi çevir ve indir (ya da parçaları yapıştırıp `parca_001_tr.txt…` olarak kaydet).
+3. **2) Çeviriyi içe aktar** → çevrilmiş dosya(lar)ı seç. Her satır oyundaki doğru yere yazılır.
+
+- Desteklenen formatlar: JSON, CSV/TSV, XML/RESX, INI/properties/TXT, PO, Ren'Py `.rpy`
+- Orijinaller `oyun\_GameSubTR_yedek` klasörüne yedeklenir; **Yamayı geri al** ile her şey eski haline döner. Tekrar içe aktarmak her zaman orijinal üzerinden yapılır.
+- `{0}`, `%s`, `<b>`, `[tag]` gibi kod parçaları kontrol edilir; Google'ın eklediği boşluklar onarılır, bozulan satır İngilizce bırakılır (oyun bozulmaz).
+- Paketlenmiş formatlar (Unity `.assets`, Unreal `.pak/.locres`) henüz desteklenmiyor. Türkçe harfler kutu görünüyorsa oyunun fontu desteklemiyordur.
+
 ## Oyun ayarları (Ayarlar → Oyunlar)
 
 - **Kaynak**: Ocr / Audio / Both
